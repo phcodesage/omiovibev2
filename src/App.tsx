@@ -16,9 +16,6 @@ function App() {
   const rtcRef = useRef<RtcSession | null>(null)
   const [chatReady, setChatReady] = useState(false)
   const [stats, setStats] = useState<{ waiting: number; pairs: number; total: number } | null>(null)
-  const [peerName, setPeerName] = useState<string | null>(null)
-  const [name, setName] = useState('')
-  const [nameOk, setNameOk] = useState(false)
   const [typingActive, setTypingActive] = useState(false)
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -30,7 +27,6 @@ function App() {
       setStatus('idle')
     })
     const offPaired = signaling.on('paired', async (m: any) => {
-      setPeerName(m.peerName || null)
       const rtc = new RtcSession({
         onLocalStream: (s) => setLocal(s),
         onRemoteStream: (s) => setRemote(s),
@@ -67,21 +63,12 @@ function App() {
       setRemote(null)
       setStatus('idle')
       setChatReady(false)
-      setPeerName(null)
     })
     const offStats = signaling.on('stats', (m: any) => {
       setStats({ waiting: m.waiting, pairs: m.pairs, total: m.total })
     })
-    const offNameSet = signaling.on('name_set', (m: any) => {
-      setName(m.name || '')
-      setNameOk(!!(m.name && String(m.name).length > 0))
-    })
-    const offError = signaling.on('error', (m: any) => {
-      if (m.code === 'invalid_name') setNameOk(false)
-      if (m.code === 'name_required') setStatus('idle')
-    })
     signaling.connect()
-    return () => { offOpen(); offClosed(); offPaired(); offSignal(); offLeft(); offStats(); offNameSet(); offError() }
+    return () => { offOpen(); offClosed(); offPaired(); offSignal(); offLeft(); offStats() }
   }, [signaling])
 
   function handleFind() {
@@ -89,7 +76,6 @@ function App() {
     setRemote(null)
     setStatus('searching')
     setChatReady(false)
-    setPeerName(null)
     signaling.find()
   }
 
@@ -100,7 +86,6 @@ function App() {
     rtcRef.current = null
     setStatus('searching')
     setChatReady(false)
-    setPeerName(null)
     signaling.next()
   }
 
@@ -111,7 +96,6 @@ function App() {
     rtcRef.current = null
     setRemote(null)
     setChatReady(false)
-    setPeerName(null)
   }
 
   function handleSend(text: string) {
@@ -125,10 +109,9 @@ function App() {
 
   return (
     <div className="app">
-      <Controls status={status} onFind={handleFind} onNext={handleNext} onLeave={handleLeave} name={name} onNameChange={setName} onSetName={() => signaling.setName(name)} nameOk={nameOk} />
+      <Controls status={status} onFind={handleFind} onNext={handleNext} onLeave={handleLeave} />
       <div className="main">
         <VideoPane local={local} remote={remote} />
-        {peerName && <div className="peer">Connected with {peerName}</div>}
         <ChatPane messages={messages} onSend={handleSend} disabled={!chatReady} typingActive={typingActive} onTyping={handleTyping} />
       </div>
       {stats && (

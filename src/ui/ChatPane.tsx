@@ -39,6 +39,7 @@ export default function ChatPane({ messages, onSend, disabled, typingActive, onT
       <div className="messages" ref={listRef}>
         {messages.map((m, i) => (
           <div key={i} className={`msg ${m.from}`}>
+            <span className="who">{m.from === 'me' ? 'You' : 'Stranger'}:</span>
             <span className="text">{m.text}</span>
             <span className="ts">{new Date(m.ts).toLocaleTimeString()}</span>
           </div>

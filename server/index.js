@@ -41,10 +41,6 @@ wss.on('connection', (ws) => {
 
     switch (msg.type) {
       case 'find': {
-        if (!ws._name || typeof ws._name !== 'string' || ws._name.length === 0) {
-          try { ws.send(JSON.stringify({ type: 'error', code: 'name_required', message: 'name required' })) } catch {}
-          break
-        }
         if (partners.has(ws)) unpair(ws)
         if (waiting.length > 0) {
           const other = waiting.shift()
@@ -57,16 +53,6 @@ wss.on('connection', (ws) => {
           waiting.push(ws)
         }
         broadcastStats()
-        break
-      }
-      case 'set_name': {
-        const n = validateName(String(msg.name || ''))
-        if (!n) {
-          try { ws.send(JSON.stringify({ type: 'error', code: 'invalid_name', message: 'invalid name' })) } catch {}
-          break
-        }
-        ws._name = n
-        try { ws.send(JSON.stringify({ type: 'name_set', name: ws._name })) } catch {}
         break
       }
       case 'signal': {

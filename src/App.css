@@ -2,12 +2,12 @@
   width: 100%;
   max-width: none;
   margin: 0 auto;
-  padding: 1.5rem 2rem;
+  padding: 1rem 1.5rem;
 }
 
 .app {
   width: 100%;
-  max-width: 1440px;
+  max-width: none;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -25,6 +25,9 @@
   padding: 0 0.75rem;
   font-size: 1rem;
   min-width: 220px;
+  background: #ffffff;
+  color: #111827;
+  border: 1px solid #e5e7eb;
 }
 .controls button {
   height: 44px;
@@ -37,43 +40,27 @@
 
 .main {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: minmax(420px, 45vw) 1fr;
   gap: 1rem;
-  min-height: 70vh;
+  align-items: stretch;
+  height: calc(100vh - 140px);
 }
 
-.video-pane {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16/9;
-  background: #111;
-  border-radius: 12px;
-  overflow: hidden;
-}
-.video-pane .video.remote {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-.video-pane .video.local {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  width: 240px;
-  height: 135px;
-  object-fit: cover;
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-}
+.video-stack { width: 100%; display: flex; flex-direction: column; gap: 0.75rem; height: 100%; min-height: 0; }
+.video-stack .box { position: relative; background: #f3f4f6; border-radius: 12px; overflow: hidden; flex: 1; min-height: 0; border: 1px solid #e5e7eb; }
+.video-stack .box .label { position: absolute; z-index: 2; top: 8px; left: 8px; background: rgba(0,0,0,0.55); color: #fff; padding: 4px 8px; border-radius: 6px; font-size: 0.9rem; }
+.video-stack .box .video { width: 100%; height: 100%; object-fit: cover; display: block; background: #f9fafb; }
 
 .chat-pane {
   display: flex;
   flex-direction: column;
+  min-height: 0;
   height: 100%;
-  background: #1a1a1a;
+  max-height: 100%;
+  background: #ffffff;
   border-radius: 12px;
   overflow: hidden;
+  border: 1px solid #e5e7eb;
 }
 .chat-pane .messages {
   flex: 1;
@@ -88,8 +75,12 @@
   align-items: baseline;
   gap: 0.5rem;
 }
-.chat-pane .msg.me .text { background: #2f2f2f; }
-.chat-pane .msg.peer .text { background: #222; }
+.chat-pane .msg .who {
+  font-weight: 600;
+  opacity: 0.95;
+}
+.chat-pane .msg.me .text { background: #e5e7eb; }
+.chat-pane .msg.peer .text { background: #f3f4f6; }
 .chat-pane .msg .text {
   padding: 0.5rem 0.75rem;
   border-radius: 10px;
@@ -106,13 +97,17 @@
   display: flex;
   gap: 0.5rem;
   padding: 0.75rem;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
 }
 .chat-pane .composer input {
   flex: 1;
   height: 44px;
   padding: 0 0.75rem;
   font-size: 1rem;
+  background: #ffffff;
+  color: #111827;
+  border: 1px solid #e5e7eb;
 }
 .chat-pane .composer button {
   height: 44px;
@@ -131,10 +126,7 @@
 }
 
 @media (max-width: 900px) {
-  .main {
-    grid-template-columns: 1fr;
-  }
-  .video-pane {
-    aspect-ratio: 4/3;
-  }
+  .main { grid-template-columns: 1fr; height: auto; }
+  .video-stack { height: auto; }
+  .chat-pane { height: auto; }
 }
