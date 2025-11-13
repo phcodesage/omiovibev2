@@ -11,7 +11,10 @@ export default function Controls({ status, onFind, onNext, onLeave }: Props) {
       <button onClick={onFind} disabled={status === 'searching' || status === 'connected'}>Start</button>
       <button onClick={onNext} disabled={status !== 'connected'}>Next</button>
       <button onClick={onLeave} disabled={status === 'idle'}>Leave</button>
-      <span className="status">{status}</span>
+      <div className="status">
+        {status === 'searching' && <div className="spinner"></div>}
+        <span>{status === 'searching' ? 'Searching for match...' : status}</span>
+      </div>
     </div>
   )
 }

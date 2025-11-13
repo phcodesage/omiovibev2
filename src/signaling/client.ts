@@ -4,6 +4,7 @@ export class SignalingClient {
   private ws: WebSocket | null = null
   private handlers = new Map<string, Set<Handler>>()
   private url: string
+  private interests: string[] = []
 
   constructor(url = `ws://localhost:3001`) {
     this.url = url
@@ -43,10 +44,18 @@ export class SignalingClient {
     this.ws.send(JSON.stringify(obj))
   }
 
-  find() { this.send({ type: 'find' }) }
+  find() { this.send({ type: 'find', interests: this.interests }) }
   next() { this.send({ type: 'next' }) }
   leave() { this.send({ type: 'leave' }) }
   signal(data: any) { this.send({ type: 'signal', data }) }
   stats() { this.send({ type: 'stats' }) }
   setName(name: string) { this.send({ type: 'set_name', name }) }
+  
+  setInterests(interests: string[]) {
+    this.interests = interests.filter(i => i.trim().length > 0)
+  }
+  
+  getInterests(): string[] {
+    return [...this.interests]
+  }
 }

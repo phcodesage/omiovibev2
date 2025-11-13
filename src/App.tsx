@@ -6,7 +6,7 @@ import ChatPane from './ui/ChatPane'
 import { SignalingClient } from './signaling/client'
 import { RtcSession } from './webrtc/rtc'
 
-type Msg = { from: 'me' | 'peer'; text: string; ts: number }
+type Msg = { from: 'me' | 'peer' | 'system'; text: string; ts: number }
 
 function App() {
   const [status, setStatus] = useState<'idle' | 'searching' | 'connected'>('idle')
@@ -18,22 +18,44 @@ function App() {
   const [stats, setStats] = useState<{ waiting: number; pairs: number; total: number } | null>(null)
   const [typingActive, setTypingActive] = useState(false)
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [interests] = useState<string[]>([])
 
   const signaling = useMemo(() => new SignalingClient(), [])
 
+  function addSystemMessage(text: string) {
+    setMessages((p) => [...p, { from: 'system', text, ts: Date.now() }])
+  }
+
   useEffect(() => {
-    const offOpen = signaling.on('open', () => {})
+    const offOpen = signaling.on('open', () => {
+      addSystemMessage('Connected to server')
+    })
     const offClosed = signaling.on('closed', () => {
       setStatus('idle')
+      addSystemMessage('Disconnected from server')
     })
     const offPaired = signaling.on('paired', async (m: any) => {
+      addSystemMessage('Found a stranger! Connecting...')
       const rtc = new RtcSession({
         onLocalStream: (s) => setLocal(s),
-        onRemoteStream: (s) => setRemote(s),
+        onRemoteStream: (s) => {
+          setRemote(s)
+          addSystemMessage('Stranger\'s video connected')
+        },
         onMessage: (t) => setMessages((p) => [...p, { from: 'peer', text: t, ts: Date.now() }]),
-        onConnected: () => setStatus('connected'),
-        onDisconnected: () => { setStatus('idle'); setChatReady(false) },
-        onReady: () => setChatReady(true),
+        onConnected: () => {
+          setStatus('connected')
+          addSystemMessage('Connected to stranger! You can now chat.')
+        },
+        onDisconnected: () => {
+          setStatus('idle')
+          setChatReady(false)
+          addSystemMessage('Connection lost')
+        },
+        onReady: () => {
+          setChatReady(true)
+          addSystemMessage('Chat is ready')
+        },
         onTyping: (active) => {
           setTypingActive(!!active)
           if (typingTimerRef.current) clearTimeout(typingTimerRef.current)
@@ -43,8 +65,12 @@ function App() {
       rtcRef.current = rtc
       let media: MediaStream | null = null
       try {
+        addSystemMessage('Requesting camera and microphone access...')
         media = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      } catch {}
+        addSystemMessage('Camera and microphone access granted')
+      } catch (err) {
+        addSystemMessage('Camera/microphone access denied or unavailable')
+      }
       if (media) await rtc.attachLocal(media)
       setChatReady(true)
       if (m.initiator) {
@@ -63,6 +89,7 @@ function App() {
       setRemote(null)
       setStatus('idle')
       setChatReady(false)
+      addSystemMessage('Stranger disconnected')
     })
     const offStats = signaling.on('stats', (m: any) => {
       setStats({ waiting: m.waiting, pairs: m.pairs, total: m.total })
@@ -76,10 +103,13 @@ function App() {
     setRemote(null)
     setStatus('searching')
     setChatReady(false)
+    addSystemMessage('Looking for someone to chat with...')
+    signaling.setInterests(interests)
     signaling.find()
   }
 
   function handleNext() {
+    addSystemMessage('Looking for a new stranger...')
     setMessages([])
     setRemote(null)
     rtcRef.current?.close()
@@ -91,6 +121,7 @@ function App() {
 
   function handleLeave() {
     setStatus('idle')
+    addSystemMessage('You disconnected')
     signaling.leave()
     rtcRef.current?.close()
     rtcRef.current = null
@@ -109,10 +140,12 @@ function App() {
 
   return (
     <div className="app">
-      <Controls status={status} onFind={handleFind} onNext={handleNext} onLeave={handleLeave} />
       <div className="main">
         <VideoPane local={local} remote={remote} />
-        <ChatPane messages={messages} onSend={handleSend} disabled={!chatReady} typingActive={typingActive} onTyping={handleTyping} />
+        <div className="chat-column">
+          <Controls status={status} onFind={handleFind} onNext={handleNext} onLeave={handleLeave} />
+          <ChatPane messages={messages} onSend={handleSend} disabled={!chatReady} typingActive={typingActive} onTyping={handleTyping} />
+        </div>
       </div>
       {stats && (
         <div className="stats">

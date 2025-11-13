@@ -3,8 +3,10 @@ import { WebSocketServer } from 'ws'
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001
 const wss = new WebSocketServer({ port: PORT })
 
+// Store waiting users with their interests
 const waiting = []
 const partners = new Map()
+const userInterests = new Map()
 let totalPairs = 0
 
 function pair(a, b) {
@@ -42,7 +44,55 @@ wss.on('connection', (ws) => {
     switch (msg.type) {
       case 'find': {
         if (partners.has(ws)) unpair(ws)
-        if (waiting.length > 0) {
+        
+        // Store user's interests if provided
+        if (msg.interests && Array.isArray(msg.interests)) {
+          const cleanInterests = msg.interests
+            .filter(i => typeof i === 'string')
+            .map(i => i.toLowerCase().trim())
+            .filter(i => i.length > 0)
+          
+          if (cleanInterests.length > 0) {
+            userInterests.set(ws, cleanInterests)
+          } else {
+            userInterests.delete(ws)
+          }
+        }
+        
+        // Try to find a match based on interests
+        const myInterests = userInterests.get(ws) || []
+        
+        if (myInterests.length > 0 && waiting.length > 0) {
+          // Find the best match based on shared interests
+          let bestMatch = -1
+          let maxSharedInterests = -1
+          
+          for (let i = 0; i < waiting.length; i++) {
+            const other = waiting[i]
+            if (other && other.readyState === other.OPEN) {
+              const otherInterests = userInterests.get(other) || []
+              if (otherInterests.length > 0) {
+                // Count shared interests
+                const sharedCount = myInterests.filter(interest => 
+                  otherInterests.includes(interest)
+                ).length
+                
+                if (sharedCount > maxSharedInterests) {
+                  maxSharedInterests = sharedCount
+                  bestMatch = i
+                }
+              }
+            }
+          }
+          
+          if (bestMatch >= 0) {
+            const other = waiting.splice(bestMatch, 1)[0]
+            pair(ws, other)
+          } else {
+            waiting.push(ws)
+          }
+        } else if (waiting.length > 0) {
+          // Fall back to random matching if no interest match found
           const other = waiting.shift()
           if (other && other.readyState === other.OPEN) {
             pair(ws, other)
@@ -52,6 +102,7 @@ wss.on('connection', (ws) => {
         } else {
           waiting.push(ws)
         }
+        
         broadcastStats()
         break
       }
@@ -91,6 +142,7 @@ wss.on('connection', (ws) => {
     const idx = waiting.indexOf(ws)
     if (idx >= 0) waiting.splice(idx, 1)
     unpair(ws)
+    userInterests.delete(ws)
     broadcastStats()
   })
 
